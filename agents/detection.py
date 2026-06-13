@@ -48,6 +48,10 @@ class DetectionAgent:
                     latency_ms = health.get("latency_ms", 0)
                     status = health.get("status")
                     
+                    # Ignore offline mock services (telemetry down) to prevent auto-flooding incident feed
+                    if status == "degraded" and latency_ms == 0:
+                        continue
+                    
                     if latency_ms > latency_threshold or status == "degraded":
                         logger.warning(f"Anomaly detected for {service}: status={status}, latency={latency_ms}ms (threshold={latency_threshold}ms).")
                         

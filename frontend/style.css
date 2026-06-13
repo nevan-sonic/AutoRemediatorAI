@@ -1,11 +1,11 @@
 /* Custom variables matching Tactical Ops design scheme */
 :root {
-    --terminal-dark: #09090b;
-    --terminal-panel: #111113;
-    --terminal-border: #232326;
+    --terminal-dark: #0b0b0d;
+    --terminal-panel: #141417;
+    --terminal-border: #27272a;
     --terminal-orange: #ff5722;
     --terminal-light: #ececf1;
-    --terminal-muted: #71717a;
+    --terminal-muted: #8a8a93;
     
     --color-green: #00c853;
     --color-amber: #ffab00;
@@ -226,4 +226,30 @@ font-mono, .font-mono, select, button, input, textarea, .nav-item {
     transition-property: background-color, border-color, color, fill, stroke;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
+}
+
+/* Escaped selectors for Tailwind layout utilities */
+.h-\[calc\(100vh-53px\)\] {
+    height: calc(100vh - 53px);
+}
+.min-h-\[340px\] {
+    min-height: 340px;
+}
+.transform {
+    transform: rotate(0deg);
+}
+.-rotate-90 {
+    transform: rotate(-90deg);
+}
+.h-full {
+    height: 100%;
+}
+.text-zinc-500 {
+    color: #71717a;
+}
+.text-zinc-400 {
+    color: #a1a1aa;
+}
+.text-zinc-300 {
+    color: #d4d4d8;
 }
