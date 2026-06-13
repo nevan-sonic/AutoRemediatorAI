@@ -177,3 +177,9 @@ async def agent_health():
     governance = get_governance_service()
     metrics = await governance.get_summary_metrics()
     return metrics
+
+# Serve Frontend Dashboard
+from fastapi.staticfiles import StaticFiles
+frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "frontend"))
+app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
