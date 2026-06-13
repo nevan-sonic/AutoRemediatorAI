@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+motor
+pymongo
+groq
+httpx
+prometheus-client
+python-dotenv
