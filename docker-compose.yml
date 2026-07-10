@@ -1,0 +1,40 @@
+networks:
+  remediator-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - remediator-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+    container_name: backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - remediator-network
+    depends_on:
+      mongodb:
+        condition: service_healthy

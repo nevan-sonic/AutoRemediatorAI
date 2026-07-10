@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoRemediator AI - Tactical Command</title>
+    <meta name="description" content="AI Operations Dashboard for autonomous incident detection, safety governance, and remediation pipeline monitoring.">
     <!-- Google Fonts for Tactical aesthetic -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -17,6 +18,10 @@
             <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
         </div>
         <div class="flex items-center gap-6 font-mono text-xs text-zinc-400">
+            <div class="sse-indicator" id="sse-status">
+                <div class="sse-dot polling" id="sse-dot"></div>
+                <span id="sse-label">POLLING</span>
+            </div>
             <div>UTC: <span id="utc-clock">00:00:00</span></div>
             <div class="text-terminal-orange flex items-center gap-1 cursor-pointer hover:text-white transition-colors" id="refresh-btn">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -38,12 +43,24 @@
                 </div>
 
                 <!-- Navigation -->
-                <nav class="flex flex-col gap-1.5 font-mono text-sm">
-                    <div class="nav-item active">
+                <nav class="flex flex-col gap-1.5 font-mono text-sm" id="main-nav">
+                    <div class="nav-item active" data-panel="command-center">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
                         </svg>
                         COMMAND CENTER
+                    </div>
+                    <div class="nav-item" data-panel="agent-health-panel">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        AGENT HEALTH
+                    </div>
+                    <div class="nav-item" data-panel="governance-panel">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                        GOVERNANCE
                     </div>
                 </nav>
                 
@@ -94,8 +111,59 @@
         </aside>
 
         <!-- Main Dashboard Content (Grid Layout) -->
-        <main class="flex-1 bg-terminal-dark p-6 overflow-y-auto grid grid-cols-12 gap-6">
-            
+        <main class="flex-1 bg-terminal-dark p-6 overflow-y-auto grid grid-cols-12 gap-6" style="align-content: start;">
+
+            <!-- ============================================ -->
+            <!-- PANEL: COMMAND CENTER (default active)       -->
+            <!-- ============================================ -->
+            <div class="nav-panel active" id="command-center">
+
+            <!-- Feature 8: System Overview KPI Cards -->
+            <section class="col-span-12 grid grid-cols-6 gap-4" id="system-overview-section">
+                <div class="kpi-card kpi-green" id="kpi-healthy">
+                    <div class="kpi-label">HEALTHY SERVICES</div>
+                    <div class="kpi-value" id="kpi-healthy-val">
+                        <div class="skeleton skeleton-text lg"></div>
+                    </div>
+                    <div class="kpi-sub" id="kpi-healthy-sub">-</div>
+                </div>
+                <div class="kpi-card kpi-rose" id="kpi-open">
+                    <div class="kpi-label">OPEN INCIDENTS</div>
+                    <div class="kpi-value" id="kpi-open-val">
+                        <div class="skeleton skeleton-text lg"></div>
+                    </div>
+                    <div class="kpi-sub" id="kpi-open-sub">active pipeline</div>
+                </div>
+                <div class="kpi-card kpi-blue" id="kpi-resolved">
+                    <div class="kpi-label">RESOLVED TODAY</div>
+                    <div class="kpi-value" id="kpi-resolved-val">
+                        <div class="skeleton skeleton-text lg"></div>
+                    </div>
+                    <div class="kpi-sub">last 24h</div>
+                </div>
+                <div class="kpi-card kpi-amber" id="kpi-mttr">
+                    <div class="kpi-label">AVG MTTR</div>
+                    <div class="kpi-value" id="kpi-mttr-val">
+                        <div class="skeleton skeleton-text lg"></div>
+                    </div>
+                    <div class="kpi-sub">minutes</div>
+                </div>
+                <div class="kpi-card kpi-orange" id="kpi-agent">
+                    <div class="kpi-label">AGENT HEALTH</div>
+                    <div class="kpi-value" id="kpi-agent-val">
+                        <div class="skeleton skeleton-text lg"></div>
+                    </div>
+                    <div class="kpi-sub" id="kpi-agent-sub">score</div>
+                </div>
+                <div class="kpi-card kpi-purple" id="kpi-autonomy">
+                    <div class="kpi-label">AUTONOMY MODE</div>
+                    <div class="kpi-value" id="kpi-autonomy-val" style="font-size:1.25rem;">
+                        <div class="skeleton skeleton-text lg"></div>
+                    </div>
+                    <div class="kpi-sub" id="kpi-autonomy-sub">-</div>
+                </div>
+            </section>
+
             <!-- Row 1: Health Circular Gauge & Activity Feed -->
             <section class="col-span-4 border border-terminal-border bg-terminal-panel rounded p-6 flex flex-col items-center justify-center gap-4 min-h-[340px]">
                 <h3 class="font-mono text-xs uppercase tracking-wider text-zinc-500 w-full text-left">Agent Health Status</h3>
@@ -169,6 +237,17 @@
                         <span id="det-status-badge" class="badge font-mono text-xs uppercase">-</span>
                     </div>
 
+                    <!-- Feature 2: Incident Timeline -->
+                    <div class="border border-terminal-border rounded p-4 bg-terminal-dark">
+                        <div class="flex items-center justify-between mb-3 cursor-pointer" id="timeline-toggle">
+                            <h3 class="font-mono text-xs uppercase tracking-wider text-terminal-orange">Pipeline Timeline</h3>
+                            <span class="font-mono text-xs text-zinc-500" id="timeline-toggle-icon">▼</span>
+                        </div>
+                        <div id="timeline-container" class="timeline-container">
+                            <div class="text-center py-4 text-zinc-500 font-mono text-xs">Loading timeline...</div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-12 gap-6">
                         <!-- Column 1: Swarm subagents & reasoning -->
                         <div class="col-span-7 flex flex-col gap-4">
@@ -199,6 +278,14 @@
                                 <ul id="det-reasoning" class="list-disc pl-4 text-xs text-zinc-500 flex flex-col gap-1 leading-relaxed">
                                     <li>-</li>
                                 </ul>
+                            </div>
+
+                            <!-- Feature 7: Execution Logs -->
+                            <div class="border border-terminal-border/60 bg-terminal-dark rounded p-4 font-mono">
+                                <h4 class="text-xs text-terminal-orange uppercase tracking-wider mb-3">Execution Logs</h4>
+                                <div id="exec-logs-container" class="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                                    <div class="text-xs text-zinc-500">No execution logs available.</div>
+                                </div>
                             </div>
                         </div>
 
@@ -248,24 +335,32 @@
                                     BLOCK_REASON: <span id="det-block-reason">-</span>
                                 </div>
 
-                                <!-- Approval Action Panel -->
+                                <!-- Feature 3: Approval Action Panel (APPROVE + REJECT) -->
                                 <div id="approval-panel" class="hidden border border-amber-500/20 bg-amber-500/5 p-4 rounded flex flex-col items-center gap-3">
                                     <div class="text-center">
                                         <p class="text-xs text-amber-500 font-bold uppercase tracking-wider">AWAITING SECURITY CLEARANCE</p>
                                         <p class="text-[10px] text-zinc-400 mt-1">Manual confirmation required to proceed with proposed mitigation</p>
                                     </div>
-                                    <button id="approve-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs uppercase py-2 rounded transition-colors duration-150">
-                                        CONFIRM_AND_EXECUTE
-                                    </button>
+                                    <div class="flex flex-col gap-2 w-full">
+                                        <button id="approve-btn" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs uppercase py-2 rounded transition-colors duration-150">
+                                            CONFIRM_AND_EXECUTE
+                                        </button>
+                                        <button id="reject-btn" class="reject-btn">
+                                            REJECT_MITIGATION
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <!-- Postmortem RCA Panel -->
+                                <!-- Feature 6: Postmortem RCA Panel -->
                                 <div id="rca-panel" class="hidden border border-terminal-border bg-terminal-panel p-4 rounded flex flex-col gap-3">
                                     <div class="flex items-center justify-between">
                                         <span class="text-xs font-bold text-terminal-orange uppercase tracking-wider">Postmortem RCA</span>
-                                        <button id="gen-rca-btn" class="bg-zinc-800 hover:bg-zinc-700 text-terminal-light text-xs font-mono px-3 py-1.5 rounded transition-all">
-                                            GENERATE_POSTMORTEM
-                                        </button>
+                                        <div class="flex gap-2">
+                                            <button id="copy-rca-btn" class="copy-btn hidden">COPY</button>
+                                            <button id="gen-rca-btn" class="bg-zinc-800 hover:bg-zinc-700 text-terminal-light text-xs font-mono px-3 py-1.5 rounded transition-all">
+                                                GENERATE_POSTMORTEM
+                                            </button>
+                                        </div>
                                     </div>
                                     <div id="rca-content" class="hidden flex flex-col gap-3 border-t border-terminal-border/50 pt-3 text-xs leading-relaxed">
                                         <div>
@@ -284,9 +379,11 @@
                                             <div class="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">PREVENTION RECOMMENDATIONS</div>
                                             <ul id="rca-prevention" class="list-decimal pl-4 text-zinc-300 flex flex-col gap-1"></ul>
                                         </div>
-                                        <button id="download-rca-btn" class="w-full mt-1 border border-terminal-border hover:bg-zinc-800 text-zinc-400 hover:text-terminal-light text-xs py-2 rounded uppercase tracking-wider font-bold transition-all">
-                                            DOWNLOAD_POSTMORTEM_TXT
-                                        </button>
+                                        <div class="flex gap-2">
+                                            <button id="download-rca-btn" class="flex-1 border border-terminal-border hover:bg-zinc-800 text-zinc-400 hover:text-terminal-light text-xs py-2 rounded uppercase tracking-wider font-bold transition-all">
+                                                DOWNLOAD_POSTMORTEM_TXT
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -294,6 +391,142 @@
                     </div>
                 </div>
             </section>
+
+            </div><!-- /command-center -->
+
+            <!-- ============================================ -->
+            <!-- PANEL: AGENT HEALTH DASHBOARD (Feature 4)    -->
+            <!-- ============================================ -->
+            <div class="nav-panel" id="agent-health-panel">
+                <section class="col-span-12 border border-terminal-border bg-terminal-panel rounded p-6 flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-terminal-border/50 pb-3">
+                        <h3 class="font-mono text-xs uppercase tracking-wider text-zinc-500">Agent Health Dashboard</h3>
+                        <span class="text-[10px] text-zinc-400 font-mono" id="agent-health-updated">-</span>
+                    </div>
+                    
+                    <!-- Agent Health Header Row -->
+                    <div class="agent-row" style="border:none; background: transparent; padding: 0 1rem;">
+                        <div class="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">Agent</div>
+                        <div class="agent-col agent-col-label">Health</div>
+                        <div class="agent-col agent-col-label">Confidence</div>
+                        <div class="agent-col agent-col-label">Latency</div>
+                        <div class="agent-col agent-col-label">Success</div>
+                        <div class="agent-col agent-col-label">Status</div>
+                    </div>
+                    
+                    <!-- Agent Rows Container -->
+                    <div id="agent-rows-container" class="flex flex-col gap-2">
+                        <!-- Skeleton rows -->
+                        <div class="agent-row"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div></div>
+                        <div class="agent-row"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div></div>
+                        <div class="agent-row"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div></div>
+                        <div class="agent-row"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div></div>
+                        <div class="agent-row"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div><div class="skeleton skeleton-text sm"></div></div>
+                    </div>
+
+                    <!-- Summary metrics below agent rows -->
+                    <div class="grid grid-cols-6 gap-4 mt-2" id="agent-summary-metrics">
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">TOTAL DECISIONS</div>
+                            <div class="governance-metric-value" id="ah-total-decisions">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">AVG CONFIDENCE</div>
+                            <div class="governance-metric-value" id="ah-avg-confidence">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">SUCCESS RATE</div>
+                            <div class="governance-metric-value" id="ah-success-rate">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">HEALTH SCORE</div>
+                            <div class="governance-metric-value" id="ah-health-score">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">DRIFT SCORE</div>
+                            <div class="governance-metric-value" id="ah-drift-score">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">AUTONOMY</div>
+                            <div class="governance-metric-value" id="ah-autonomy">-</div>
+                        </div>
+                    </div>
+                </section>
+            </div><!-- /agent-health-panel -->
+
+            <!-- ============================================ -->
+            <!-- PANEL: AI GOVERNANCE (Feature 5)             -->
+            <!-- ============================================ -->
+            <div class="nav-panel" id="governance-panel">
+                <section class="col-span-12 border border-terminal-border bg-terminal-panel rounded p-6 flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b border-terminal-border/50 pb-3">
+                        <h3 class="font-mono text-xs uppercase tracking-wider text-zinc-500">AI Governance Panel</h3>
+                        <span class="text-[10px] text-zinc-400 font-mono" id="governance-updated">-</span>
+                    </div>
+
+                    <!-- Governance Warning Banner (dynamic) -->
+                    <div id="governance-banner-container"></div>
+
+                    <!-- Autonomy Level Display -->
+                    <div class="flex items-center gap-4 border border-terminal-border rounded p-4 bg-terminal-dark">
+                        <div class="flex flex-col gap-1">
+                            <span class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">Current Autonomy Level</span>
+                            <div class="flex items-center gap-3">
+                                <span class="autonomy-badge" id="gov-autonomy-badge">-</span>
+                                <span class="font-mono text-xs text-zinc-400" id="gov-autonomy-desc">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Governance Metrics Grid -->
+                    <div class="grid grid-cols-6 gap-4" id="governance-metrics-grid">
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">HEALTH SCORE</div>
+                            <div class="governance-metric-value" id="gov-health-score">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">DECISION ACCURACY</div>
+                            <div class="governance-metric-value" id="gov-decision-accuracy">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">AGENT DRIFT</div>
+                            <div class="governance-metric-value" id="gov-drift">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">TOTAL DECISIONS</div>
+                            <div class="governance-metric-value" id="gov-total-decisions">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">SUCCESS RATE</div>
+                            <div class="governance-metric-value" id="gov-success-rate">-</div>
+                        </div>
+                        <div class="governance-metric">
+                            <div class="governance-metric-label">GOVERNANCE STATUS</div>
+                            <div class="governance-metric-value" id="gov-status">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Autonomy Level Breakdown -->
+                    <div class="border border-terminal-border rounded p-4 bg-terminal-dark flex flex-col gap-3">
+                        <span class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">Autonomy Level Definitions</span>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="flex flex-col gap-1 p-3 rounded border border-terminal-border/50">
+                                <span class="autonomy-badge full" style="align-self:flex-start;">FULL</span>
+                                <span class="font-mono text-[10px] text-zinc-400 mt-1">Health &gt; 85%. All agents operate autonomously. No human approval required.</span>
+                            </div>
+                            <div class="flex flex-col gap-1 p-3 rounded border border-terminal-border/50">
+                                <span class="autonomy-badge assisted" style="align-self:flex-start;">ASSISTED</span>
+                                <span class="font-mono text-[10px] text-zinc-400 mt-1">Health 60-85%. Human approval required for high-risk actions.</span>
+                            </div>
+                            <div class="flex flex-col gap-1 p-3 rounded border border-terminal-border/50">
+                                <span class="autonomy-badge escalate" style="align-self:flex-start;">ESCALATE_ALL</span>
+                                <span class="font-mono text-[10px] text-zinc-400 mt-1">Health &lt; 60%. All actions escalated. Pipeline halted.</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div><!-- /governance-panel -->
+
         </main>
     </div>
 
