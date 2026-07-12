@@ -18,6 +18,19 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+# Set up OpenTelemetry distributed tracing to Jaeger
+provider = TracerProvider()
+otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
+otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
+provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+trace.set_tracer_provider(provider)
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -31,6 +44,8 @@ app = FastAPI(
     description="Autonomous incident detection, safety governance, and remediation pipeline API.",
     version="1.0.0"
 )
+FastAPIInstrumentor.instrument_app(app)
+
 
 # CORS configuration
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")

@@ -5,10 +5,25 @@ import logging
 from fastapi import FastAPI, Response
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Gauge
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+# Set up OpenTelemetry distributed tracing to Jaeger
+provider = TracerProvider()
+otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
+otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
+provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+trace.set_tracer_provider(provider)
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title=os.getenv("SERVICE_NAME", "mock-service"))
+FastAPIInstrumentor.instrument_app(app)
+
 
 # Simulated state
 state = {
@@ -60,3 +75,12 @@ async def inject_failure():
     state["degraded_until"] = time.time() + 300
     update_metrics()
     return {"status": "failure_injected", "duration_seconds": 300}
+
+@app.post("/reset")
+async def reset():
+    logger.info("Service reset request received. Restoring healthy state.")
+    state["is_degraded"] = False
+    state["degraded_until"] = 0
+    update_metrics()
+    return {"status": "healthy"}
+

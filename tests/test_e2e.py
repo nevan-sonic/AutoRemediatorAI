@@ -26,6 +26,8 @@ async def test_e2e():
     try:
         # Cleanup past test runs
         await mongo.incidents.delete_many({"id": test_id})
+        await mongo.governance_events.delete_many({})
+
         
         # Write verification document
         await mongo.incidents.insert_one({
@@ -55,7 +57,7 @@ async def test_e2e():
         print(f"OK: Groq text completion response: '{text_res.strip()}'")
         
         json_system = "You are a test json assistant. Respond in JSON."
-        json_messages = [{"role": "user", "content": "Response structure: {'status': 'ok'}"}]
+        json_messages = [{"role": "user", "content": 'Response structure: {"status": "ok"}'}]
         json_res = groq.chat_json(json_messages, system=json_system)
         assert json_res.get("status") == "ok", "Failed to parse JSON response correctly"
         print(f"OK: Groq JSON completion response parsed successfully: {json_res}")

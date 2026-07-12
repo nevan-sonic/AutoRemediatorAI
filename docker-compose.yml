@@ -29,6 +29,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
     ports:
       - "8000:8000"
     volumes:
@@ -38,3 +40,95 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+
+  payment-service:
+    build:
+      context: ./mock_services
+    container_name: payment-service
+    restart: unless-stopped
+    environment:
+      - SERVICE_NAME=payment-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    ports:
+      - "8001:8000"
+    networks:
+      - remediator-network
+    depends_on:
+      - jaeger
+
+  inventory-service:
+    build:
+      context: ./mock_services
+    container_name: inventory-service
+    restart: unless-stopped
+    environment:
+      - SERVICE_NAME=inventory-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    ports:
+      - "8002:8000"
+    networks:
+      - remediator-network
+    depends_on:
+      - jaeger
+
+  order-service:
+    build:
+      context: ./mock_services
+    container_name: order-service
+    restart: unless-stopped
+    environment:
+      - SERVICE_NAME=order-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    ports:
+      - "8003:8000"
+    networks:
+      - remediator-network
+    depends_on:
+      - jaeger
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - remediator-network
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    networks:
+      - remediator-network
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - ./config/promtail.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    entrypoint:
+      - /usr/bin/promtail
+      - -config.file=/etc/promtail/config.yml
+    networks:
+      - remediator-network
+    depends_on:
+      - loki
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.51
+    container_name: jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    networks:
+      - remediator-network
+

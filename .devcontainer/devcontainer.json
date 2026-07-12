@@ -1,0 +1,46 @@
+{
+  "name": "AutoRemediator AI Developer Environment",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bullseye",
+  
+  // Install Docker outside of Docker so that codespaces can start the docker-compose stack
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "version": "latest",
+      "moby": "true"
+    }
+  },
+
+  // Forward application and dashboard ports automatically
+  "forwardPorts": [8000, 8001, 8002, 8003, 9090, 16686, 3100],
+  
+  "portsAttributes": {
+    "8000": {
+      "label": "AutoRemediator Command Dashboard",
+      "onAutoForward": "openPreview"
+    },
+    "9090": {
+      "label": "Prometheus Dashboard",
+      "onAutoForward": "ignore"
+    },
+    "16686": {
+      "label": "Jaeger Distributed Tracing UI",
+      "onAutoForward": "ignore"
+    }
+  },
+
+  // Install workspace dependencies on environment launch
+  "postCreateCommand": "pip install -r requirements.txt && pip install -r mock_services/requirements.txt",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.terminal.activateEnvInTrigger": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}

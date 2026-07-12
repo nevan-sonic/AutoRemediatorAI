@@ -57,16 +57,19 @@ class GroqClient:
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON response: {cleaned}")
-            # Try parsing any JSON sub-string in case there's surrounding text
+            logger.warning(f"Failed to parse JSON with json.loads, trying ast.literal_eval fallback: {cleaned}")
+            import ast
             try:
                 start_idx = cleaned.find("{")
                 end_idx = cleaned.rfind("}")
                 if start_idx != -1 and end_idx != -1:
-                    return json.loads(cleaned[start_idx:end_idx+1])
-            except Exception:
-                pass
+                    res = ast.literal_eval(cleaned[start_idx:end_idx+1])
+                    if isinstance(res, dict):
+                        return res
+            except Exception as ast_err:
+                logger.error(f"ast.literal_eval fallback failed: {ast_err}")
             raise e
+
 
 _client_instance = None
 

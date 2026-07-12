@@ -1,17 +1,71 @@
 import asyncio
 import time
 import logging
+import shutil
+import httpx
 
 logger = logging.getLogger(__name__)
 
 # Module-level dictionary tracking last execution timestamp per service
 _last_execution = {}
 
+_PORT_MAP = {
+    "payment-service": 8001,
+    "inventory-service": 8002,
+    "order-service": 8003
+}
+
 def get_last_execution_time(service_name: str) -> float:
     return _last_execution.get(service_name, 0.0)
 
 def set_last_execution_time(service_name: str, timestamp: float):
     _last_execution[service_name] = timestamp
+
+def is_docker_available() -> bool:
+    return shutil.which("docker") is not None
+
+async def execute_http_reset(service_name: str) -> dict:
+    port = _PORT_MAP.get(service_name)
+    if not port:
+        logger.warning(f"No port mapped for service '{service_name}' during HTTP reset fallback.")
+        return {
+            "success": False, 
+            "returncode": -1, 
+            "stdout": "", 
+            "stderr": f"Unknown service: {service_name}"
+        }
+    
+    url = f"http://localhost:{port}/reset"
+    logger.info(f"Docker not found on host. Falling back to HTTP reset for {service_name} at {url}...")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url)
+            if response.status_code == 200:
+                logger.info(f"Successfully reset mock service {service_name} via HTTP.")
+                return {
+                    "success": True, 
+                    "returncode": 0, 
+                    "stdout": f"HTTP Reset of {service_name} succeeded.", 
+                    "stderr": ""
+                }
+            else:
+                msg = f"HTTP Reset failed with status code {response.status_code}"
+                logger.warning(msg)
+                return {
+                    "success": False, 
+                    "returncode": response.status_code, 
+                    "stdout": "", 
+                    "stderr": msg
+                }
+    except Exception as e:
+        msg = f"HTTP Reset request failed for {service_name}: {e}"
+        logger.error(msg)
+        return {
+            "success": False, 
+            "returncode": -2, 
+            "stdout": "", 
+            "stderr": msg
+        }
 
 async def run_command(cmd: str, timeout: float = 30.0) -> dict:
     logger.info(f"Executing command: {cmd}")
@@ -61,6 +115,12 @@ async def run_command(cmd: str, timeout: float = 30.0) -> dict:
         }
 
 async def execute_restart(service_name: str) -> dict:
+    if not is_docker_available():
+        res = await execute_http_reset(service_name)
+        if res["success"]:
+            _last_execution[service_name] = time.time()
+        return res
+
     cmd = f"docker compose restart {service_name}"
     res = await run_command(cmd, timeout=30.0)
     if res["success"]:
@@ -68,6 +128,12 @@ async def execute_restart(service_name: str) -> dict:
     return res
 
 async def execute_rollback(service_name: str) -> dict:
+    if not is_docker_available():
+        res = await execute_http_reset(service_name)
+        if res["success"]:
+            _last_execution[service_name] = time.time()
+        return res
+
     # Simulates rollback by scaling to 0, then back to 1
     cmd_down = f"docker compose up -d --scale {service_name}=0"
     res_down = await run_command(cmd_down, timeout=30.0)
@@ -81,8 +147,15 @@ async def execute_rollback(service_name: str) -> dict:
     return res_up
 
 async def execute_scale(service_name: str, replicas: int) -> dict:
+    if not is_docker_available():
+        res = await execute_http_reset(service_name)
+        if res["success"]:
+            _last_execution[service_name] = time.time()
+        return res
+
     cmd = f"docker compose up -d --scale {service_name}={replicas}"
     res = await run_command(cmd, timeout=30.0)
     if res["success"]:
         _last_execution[service_name] = time.time()
     return res
+
